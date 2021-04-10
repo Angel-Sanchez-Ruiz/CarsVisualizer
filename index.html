@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <style>
+
+
+    div.row {
+
+        margin-left: 2%;
+        margin-right: 2%;
+        color:#3182bd;
+        background-color:white;
+        border-radius:1%;
+        padding:1%;
+
+    }
+
+    #carDoors, #carAge, #carFuelType {
+
+        float: left;
+        font-size: 20px;
+        width:28.5%;
+        background-color: #003366;
+        color:#d9d9d9;
+        padding : 2%;
+        border-color:#001a33;
+        border-radius: 20px;
+        margin-bottom:1%;
+        margin-left:1%
+        margin-right:1%
+ 
+
+    }
+
+    #carPrice {
+
+        float: left;
+        font-size: 20px;
+        width:94.5%;
+        background-color: #003366;
+        color:#d9d9d9;
+        padding : 2%;
+        border-color:#001a33;
+        border-radius: 20px;
+        margin-bottom:1%;
+        margin-left:1%
+        margin-right:1%
+
+    }
+
+    </style>
+
+	<meta charset="UTF-8">
+	<title>Toyota Corolla</title>
+
+
+    <link rel="stylesheet" href="bootstrap.min.css"/>
+    <link rel="stylesheet" href="dc.css"/>
+    <link rel="stylesheet" href="StyleSaver.css"/>
+    <script src="d3.js"></script>
+    <script src="crossfilter.js"></script>
+    <script src="dc.js"></script>
+    <script src="FileSaver.js"></script>
+
+
+
+</head>
+
+<body>
+<body style="background-color:#001a33;">
+
+
+
+	<h1 style="color:white; margin-left:1%; margin-right:1%; padding:1%; text-align:center; background-color: #003366; border-radius:1%; "> Toyota Corolla </h1>
+
+
+<!-- diagramas mostrados -->
+	<div id="carDoors">
+    <strong>Doors</strong>
+    <span class="reset" style="display: none;">Selected: <span class="filter"></span></span>
+    <a class="reset" href="javascript:carDoorsChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+    <div class="clearfix"></div>
+
+	</div>
+
+	<div id="carAge">
+		<strong>Age</strong>
+    <span class="reset" style="display: none;">Selected: <span class="filter"></span></span>
+    <a class="reset" href="javascript:carAgeChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+    <div class="clearfix"></div>
+	</div>
+
+	<div id="carFuelType">
+		<strong>Fuel Type</strong>
+    <span class="reset" style="display: none;">Selected: <span class="filter"></span></span>
+    <a class="reset" href="javascript:carFuelTypeChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+    <div class="clearfix"></div>
+	</div>
+
+	<div id="carPrice">
+		<strong>Price</strong>
+    <span class="reset" style="display: none;">Selected: <span class="filter"></span></span>
+    <a class="reset" href="javascript:carPriceChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+    <div class="clearfix"></div>
+	</div>
+
+
+<!-- contador de datos seleccionados -->
+    <div>
+        <div class="dc-data-count">
+            <span class="filter-count"></span> selected out of <span class="total-count"></span> records | <a
+                href="javascript:dc.filterAll(); dc.renderAll();">Reset All</a>
+        </div>
+    </div>
+
+
+    <table class="table table-hover dc-data-table">
+    </table>
+
+
+<!-- 1º mostrador paginas / 2º table data  class creator + saver/selecter data -->
+    <div class="row">
+
+      <div id="paging">
+        Showing <span id="begin"></span>-<span id="end"></span> of <span id="size"></span> <span id="totalsize"></span>
+        <input id="last" class="btn" type="Button" value="Last" onclick="javascript:last()" />
+        <input id="next" class="btn" type="button" value="Next" onclick="javascript:next()"/>
+      </div>
+
+      <div style="float: right">
+        <button class="btn" id="download">download</button>
+      </div>
+      <div id="download-type" style="clear: both; float: right">
+        <div><label><input type=radio name="operation" value="raw" checked="true">&nbsp;all data</label></div>
+        <div><label><input type=radio name="operation" value="table">&nbsp;table data</label></div>
+      </div>
+
+
+      <table id="table" class="table table-striped"></table>
+
+    </div>
+
+
+	<script>
+
+        //creaccion variables para los diagramas 
+		var carDoorsChart = dc.rowChart("#carDoors");
+		var carAgeChart = dc.rowChart("#carAge");
+		var carFuelTypeChart = dc.pieChart("#carFuelType");
+		var carPriceChart = dc.barChart("#carPrice");
+		var visCount =  dc.dataCount(".dc-data-count");
+        var table = dc.dataTable("#table");
+
+
+        var ndx;
+		d3.csv("ToyotaCorolla.csv").then(function(data) {
+
+
+			//Price,Age,KM,FuelType,HP,MetColor,Automatic,CC,Doors,Weight
+            //13500,23,46986,Diesel,90,1,0,2000,3,1165
+            //13750,23,72937,Diesel,90,1,0,2000,3,1165
+            //13950,24,41711,Diesel,90,1,0,2000,3,1165
+            //14950,26,48000,Diesel,90,0,0,2000,3,1165
+			
+
+			ndx = crossfilter(data);
+			var all = ndx.groupAll();
+            var fmt = d3.format('02d');
+
+            var carDoorsDim = ndx.dimension(function (d) { return d["Doors"]; });
+            console.log(carDoorsDim);
+			var carAgeDim = ndx.dimension(function (d) { return d["Age"]; });
+			var carFuelTypeDim = ndx.dimension(function (d) { return d["FuelType"]; });
+			var carPriceDim = ndx.dimension(function (d) { return d["Price"]; });
+            var runDimension = ndx.dimension(function(d) {return [fmt(+d.Price)]; });
+
+			var carDoorsGroup = carDoorsDim.group();
+			var carAgeGroup = carAgeDim.group();
+			var carFuelTypeGroup = carFuelTypeDim.group();
+			var carPriceGroup = carPriceDim.group();
+			
+
+
+			carDoorsChart
+                //.ordinalColors(['#3182bd', '#6baed6', '#9ecae1', '#c6dbef', '#dadaeb'])
+				.dimension(carDoorsDim)
+				.group(carDoorsGroup)
+				.elasticX(true);
+
+			carAgeChart
+                //.ordinalColors(['#3182bd', '#6baed6', '#9ecae1', '#c6dbef', '#dadaeb'])
+				.dimension(carAgeDim)
+				.group(carAgeGroup)
+				.elasticX(true)
+				.data(function (group) { return group.top(10); });
+
+			carFuelTypeChart
+                .ordinalColors(['#66b3ff', '#00ff99', '#ff9933'])
+                .radius(100)
+                .innerRadius(50)
+                .dimension(carFuelTypeDim)
+                .group(carFuelTypeGroup)
+                .legend(dc.legend())
+                .label(d => {
+                    if (carFuelTypeChart.hasFilter() && !carFuelTypeChart.hasFilter(d.key)) {
+                        return `${d.key}(0%)`;
+                    }
+                    let label = d.key;
+                    if (all.value()) {
+                        label += `(${Math.floor(d.value / all.value() * 100)}%)`;
+                    }
+                    return label;
+                });
+
+			carPriceChart
+                //.yAxisLabel("cantidad de coches")
+                .dimension(carPriceDim)
+                .group(carPriceGroup)
+                .elasticY(true)
+                //.x(d3.scaleLineal());
+                .x(d3.scaleLinear().domain([5000, 35000]))
+                
+
+
+			visCount
+				.dimension(ndx)
+				.group(all);
+//chart que muestra la tabla con los datos seleccionados
+            table
+                .width(200)
+                .height(480)
+                .dimension(runDimension)
+                //.size(100)
+                .size(Infinity)
+                .showSections(false)
+                .columns(['Price', 'Age', 'FuelType','Doors'])
+                .sortBy(function (d) { return [fmt(+d.Price)]; })
+                .order(d3.ascending)
+//mostrar cantidad de datos distribuidos en las distintas paginas
+                .on('preRender', update_offset)
+                .on('preRedraw', update_offset)
+                .on('pretransition', display);
+
+//Chart que permite guardar los datos seleccionados en un archivo 
+            d3.select('#download')
+                .on('click', function() {
+                        var data = carPriceDim.top(Infinity);
+                        if(d3.select('#download-type input:checked').node().value==='table') {
+                            data = data.sort(function(a, b) {
+                                return table.order()(table.sortBy()(a), table.sortBy()(b));
+                            });
+                            data = data.map(function(d) {
+                                var row = {};
+                                table.columns().forEach(function(c) {
+                                    row[table._doColumnHeaderFormat(c)] = table._doColumnValueFormat(c, d);
+                                });
+                                return row;
+                            });
+                        }
+                        var blob = new Blob([d3.csvFormat(data)], {type: "text/csv;charset=utf-8"});
+                        saveAs(blob, 'ToyotaCorollaSelect.csv');
+                });
+
+
+			dc.renderAll();
+
+
+
+			
+	});
+
+    var ofs = 0, pag = 20;
+
+
+    function update_offset() {
+        var totFilteredRecs = ndx.groupAll().value();
+        var end = ofs + pag > totFilteredRecs ? totFilteredRecs : ofs + pag;
+        ofs = ofs >= totFilteredRecs ? Math.floor((totFilteredRecs - 1) / pag) * pag : ofs;
+        ofs = ofs < 0 ? 0 : ofs;
+
+        table.beginSlice(ofs);
+        table.endSlice(ofs+pag);
+    }
+    function display() {
+        var totFilteredRecs = ndx.groupAll().value();
+        var end = ofs + pag > totFilteredRecs ? totFilteredRecs : ofs + pag;
+        d3.select('#begin')
+            .text(end === 0? ofs : ofs + 1);
+        d3.select('#end')
+            .text(end);
+        d3.select('#last')
+            .attr('disabled', ofs-pag<0 ? 'true' : null);
+        d3.select('#next')
+            .attr('disabled', ofs+pag>=totFilteredRecs ? 'true' : null);
+        d3.select('#size').text(totFilteredRecs);
+        if(totFilteredRecs != ndx.size()){
+            d3.select('#totalsize').text("(filtered Total: " + ndx.size() + " )");
+        }else{
+            d3.select('#totalsize').text('');
+        }
+    }
+    function next() {
+        ofs += pag;
+        update_offset();
+        table.redraw();
+    }
+    function last() {
+        ofs -= pag;
+        update_offset();
+        table.redraw();
+    }
+
+
+
+
+
+	</script>
+
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
